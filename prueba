@@ -1,24 +1,18 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-// Credenciales de la red WiFi
-const char* ssid = "Coda";         // Tu red WiFi
-const char* password = "Mac25060*";  // Tu contraseña WiFi
+const char* ssid = "Coda";
+const char* password = "Mac25060*";
 
-// Pines para controlar los LEDs
-const int ledPin1 = 21; // LED habitación 1
-const int ledPin2 = 22; // LED habitación 2
-const int ledPin3 = 23; // LED sala
+const int ledPin1 = 21;
+const int ledPin2 = 22;
+const int ledPin3 = 23;
 
-// Pines para controlar el primer motor (cortinas)
-const int motorPin1 = 4; // Pin conectado al primer terminal del motor
-const int motorPin2 = 5; // Pin conectado al segundo terminal del motor
+const int motorPin1 = 4;
+const int motorPin2 = 5;
+const int motorPin3 = 18;
+const int motorPin4 = 19;
 
-// Pines para controlar el segundo motor (abrir/cerrar)
-const int motorPin3 = 18; // Pin conectado al primer terminal del motor de apertura
-const int motorPin4 = 19; // Pin conectado al segundo terminal del motor de apertura
-
-// Estados de los motores y sus respectivas acciones
 bool cortinasSubidas = false;
 bool motorCortinasEnMovimiento = false;
 unsigned long tiempoInicioMovimientoCortinas = 0;
@@ -27,14 +21,11 @@ bool aperturaAbierta = false;
 bool motorAperturaEnMovimiento = false;
 unsigned long tiempoInicioMovimientoApertura = 0;
 
-const unsigned long duracionMovimiento = 3000; // Duración del movimiento en milisegundos
+const unsigned long duracionMovimiento = 3000;
 
-// Instancia del servidor web en el puerto 80
 WebServer server(80);
 
-// Función para manejar la conexión inicial
 void handle_OnConnect() {
-  Serial.println("Cliente conectado, sirviendo página principal...");
   String html = R"rawliteral(
     <!DOCTYPE html>
     <html lang="es">
@@ -116,58 +107,48 @@ void handle_OnConnect() {
   server.send(200, "text/html", html);
 }
 
-// Funciones para controlar los LEDs (luces)
 void encenderHabitacion1() {
   digitalWrite(ledPin1, HIGH);
-  server.sendHeader("Location", "/", true); // Redirige a la página principal
-  server.send(303); // Código HTTP para redirección
+  server.sendHeader("Location", "/", true);
+  server.send(303);
 }
 
 void apagarHabitacion1() {
   digitalWrite(ledPin1, LOW);
-  server.sendHeader("Location", "/", true); // Redirige a la página principal
-  server.send(303); // Código HTTP para redirección
+  server.sendHeader("Location", "/", true);
+  server.send(303);
 }
 
 void encenderHabitacion2() {
   digitalWrite(ledPin2, HIGH);
-  server.sendHeader("Location", "/", true); // Redirige a la página principal
-  server.send(303); // Código HTTP para redirección
+  server.sendHeader("Location", "/", true);
+  server.send(303);
 }
 
 void apagarHabitacion2() {
   digitalWrite(ledPin2, LOW);
-  server.sendHeader("Location", "/", true); // Redirige a la página principal
-  server.send(303); // Código HTTP para redirección
+  server.sendHeader("Location", "/", true);
+  server.send(303);
 }
 
 void encenderSala() {
   digitalWrite(ledPin3, HIGH);
-  server.sendHeader("Location", "/", true); // Redirige a la página principal
-  server.send(303); // Código HTTP para redirección
+  server.sendHeader("Location", "/", true);
+  server.send(303);
 }
 
 void apagarSala() {
   digitalWrite(ledPin3, LOW);
-  server.sendHeader("Location", "/", true); // Redirige a la página principal
-  server.send(303); // Código HTTP para redirección
+  server.sendHeader("Location", "/", true);
+  server.send(303);
 }
 
-// Función para iniciar el movimiento del motor
 void iniciarMovimientoCortinas(bool subir) {
   if (!motorCortinasEnMovimiento) {
     motorCortinasEnMovimiento = true;
     tiempoInicioMovimientoCortinas = millis();
-
-    if (subir) {
-      digitalWrite(motorPin1, HIGH);
-      digitalWrite(motorPin2, LOW);
-      Serial.println("Subiendo cortinas...");
-    } else {
-      digitalWrite(motorPin1, LOW);
-      digitalWrite(motorPin2, HIGH);
-      Serial.println("Bajando cortinas...");
-    }
+    digitalWrite(motorPin1, subir ? HIGH : LOW);
+    digitalWrite(motorPin2, subir ? LOW : HIGH);
   }
 }
 
@@ -175,127 +156,75 @@ void iniciarMovimientoApertura(bool abrir) {
   if (!motorAperturaEnMovimiento) {
     motorAperturaEnMovimiento = true;
     tiempoInicioMovimientoApertura = millis();
-
-    if (abrir) {
-      digitalWrite(motorPin3, HIGH);
-      digitalWrite(motorPin4, LOW);
-      Serial.println("Abriendo apertura...");
-    } else {
-      digitalWrite(motorPin3, LOW);
-      digitalWrite(motorPin4, HIGH);
-      Serial.println("Cerrando apertura...");
-    }
+    digitalWrite(motorPin3, abrir ? HIGH : LOW);
+    digitalWrite(motorPin4, abrir ? LOW : HIGH);
   }
 }
 
-// Función para manejar la solicitud de subir cortinas
 void handle_subirCortinas() {
-  if (cortinasSubidas) {
-    Serial.println("Las cortinas ya están arriba.");
-    server.sendHeader("Location", "/", true);
-    server.send(303);
-  } else if (!motorCortinasEnMovimiento) {
+  if (!cortinasSubidas && !motorCortinasEnMovimiento) {
     iniciarMovimientoCortinas(true);
     cortinasSubidas = true;
     server.sendHeader("Location", "/", true);
     server.send(303);
-  } else {
-    server.send(200, "text/html", "<h1>Las cortinas están en movimiento, espera.</h1><a href='/'>Volver al control</a>");
   }
 }
 
-// Función para manejar la solicitud de bajar cortinas
 void handle_bajarCortinas() {
-  if (!cortinasSubidas) {
-    Serial.println("Las cortinas ya están abajo.");
-    server.sendHeader("Location", "/", true);
-    server.send(303);
-  } else if (!motorCortinasEnMovimiento) {
+  if (cortinasSubidas && !motorCortinasEnMovimiento) {
     iniciarMovimientoCortinas(false);
     cortinasSubidas = false;
     server.sendHeader("Location", "/", true);
     server.send(303);
-  } else {
-    server.send(200, "text/html", "<h1>Las cortinas están en movimiento, espera.</h1><a href='/'>Volver al control</a>");
   }
 }
 
-// Función para manejar la solicitud de abrir la apertura
 void handle_abrirApertura() {
-  if (aperturaAbierta) {
-    Serial.println("La apertura ya está abierta.");
-    server.sendHeader("Location", "/", true);
-    server.send(303);
-  } else if (!motorAperturaEnMovimiento) {
+  if (!aperturaAbierta && !motorAperturaEnMovimiento) {
     iniciarMovimientoApertura(true);
     aperturaAbierta = true;
     server.sendHeader("Location", "/", true);
     server.send(303);
-  } else {
-    server.send(200, "text/html", "<h1>La apertura está en movimiento, espera.</h1><a href='/'>Volver al control</a>");
   }
 }
 
-// Función para manejar la solicitud de cerrar la apertura
 void handle_cerrarApertura() {
-  if (!aperturaAbierta) {
-    Serial.println("La apertura ya está cerrada.");
-    server.sendHeader("Location", "/", true);
-    server.send(303);
-  } else if (!motorAperturaEnMovimiento) {
+  if (aperturaAbierta && !motorAperturaEnMovimiento) {
     iniciarMovimientoApertura(false);
     aperturaAbierta = false;
     server.sendHeader("Location", "/", true);
     server.send(303);
-  } else {
-    server.send(200, "text/html", "<h1>La apertura está en movimiento, espera.</h1><a href='/'>Volver al control</a>");
   }
 }
 
 void setup() {
-  // Iniciar comunicación serie
   Serial.begin(115200);
-
-  // Conectar al WiFi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("Conectando al WiFi...");
   }
-  Serial.println("Conexión WiFi establecida");
-  Serial.print("Dirección IP del ESP32: ");
-  Serial.println(WiFi.localIP());
-
-  // Configurar los pines
   pinMode(ledPin1, OUTPUT);
   pinMode(ledPin2, OUTPUT);
   pinMode(ledPin3, OUTPUT);
-
   pinMode(motorPin1, OUTPUT);
   pinMode(motorPin2, OUTPUT);
   pinMode(motorPin3, OUTPUT);
   pinMode(motorPin4, OUTPUT);
-
-  // Rutas del servidor
   server.on("/", HTTP_GET, handle_OnConnect);
   server.on("/subir", HTTP_GET, handle_subirCortinas);
   server.on("/bajar", HTTP_GET, handle_bajarCortinas);
   server.on("/abrir", HTTP_GET, handle_abrirApertura);
   server.on("/cerrar", HTTP_GET, handle_cerrarApertura);
-
-  // Rutas para control de luces
   server.on("/encenderHabitacion1", HTTP_GET, encenderHabitacion1);
   server.on("/apagarHabitacion1", HTTP_GET, apagarHabitacion1);
   server.on("/encenderHabitacion2", HTTP_GET, encenderHabitacion2);
   server.on("/apagarHabitacion2", HTTP_GET, apagarHabitacion2);
   server.on("/encenderSala", HTTP_GET, encenderSala);
   server.on("/apagarSala", HTTP_GET, apagarSala);
-
-  // Iniciar el servidor
   server.begin();
-  Serial.println("Servidor iniciado");
 }
 
 void loop() {
   server.handleClient();
 }
+
